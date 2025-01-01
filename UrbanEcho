@@ -1,1 +1,111 @@
+import feedparser
+from flask import Flask, jsonify,render_template
+
+app = Flask(__name__)
+
+# Alternative RSS Feed URLs (replace with publicly accessible RSS feeds)
+RSS_FEEDS = {
+    'Technology': 'http://feeds.bbci.co.uk/news/technology/rss.xml',
+    'World': 'http://feeds.bbci.co.uk/news/world/rss.xml',
+    'Sports': 'https://rss.cnn.com/rss/edition_sport.rss',  # Changed to CNN Sports RSS
+}
+
+def fetch_news():
+    news_data = []
+    for category, url in RSS_FEEDS.items():
+        print(f"Fetching data for category: {category}")
+        feed = feedparser.parse(url)
+
+        # Debugging the entire feed structure
+        print(f"Feed URL: {url}")
+        print(f"Feed entries count: {len(feed.entries)}")  # Check number of entries in the feed
+
+        if feed.entries:
+            for entry in feed.entries[:5]:  # Limit to 5 articles per category
+                # Check if the summary and published fields exist
+                summary = entry.summary if 'summary' in entry else 'No summary available'
+                published = entry.published if 'published' in entry else 'No date available'
+
+                news_data.append({
+                    "title": entry.title,
+                    "link": entry.link,
+                    "published": published,
+                    "category": category,
+                    "summary": summary,
+                })
+        else:
+            print(f"No entries found for {category}")
+
+    print(f"News Data: {news_data}")
+    return news_data
+
+@app.route("/api/news")
+def get_news():
+    news = fetch_news()  # Fetch news data from RSS feeds
+    return jsonify(news)
+@app.route("/")
+def home():
+    news = fetch_news()  # Fetch news data for the homepage
+    return render_template("index.html", news=news)
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UrbanEcho News</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            padding: 15px;
+        }
+        .news-item {
+            background-color: white;
+            border: 1px solid #ddd;
+            margin: 15px;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .news-item h3 {
+            margin-top: 0;
+        }
+        .news-item a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+        .news-item a:hover {
+            text-decoration: underline;
+        }
+</style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>UrbanEcho News</h1>
+    </div>
+
+    <div class="container">
+        {% for article in news %}
+        <div class="news-item">
+            <h3>{{ article.title }}</h3>
+            <p><strong>Category:</strong> {{ article.category }}</p>
+            <p><strong>Published:</strong> {{ article.published }}</p>
+            <p><strong>Summary:</strong> {{ article.summary }}</p>
+            <a href="{{ article.link }}" target="_blank">Read more...</a>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
 
